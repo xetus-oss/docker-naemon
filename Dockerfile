@@ -17,11 +17,11 @@ RUN apt-get update &&\
 #
 # Do post setup configuration
 #
-CMD sed -i 's/^#\(.*livestatus.so.*\)/\1/' /etc/naemon/naemon.cfg &&\
+RUN sed -i 's/^#\(.*livestatus.so.*\)/\1/' /etc/naemon/naemon.cfg &&\
   sed -i 's/^#\(FromLineOverride=.*\)/FromLineOverride=YES/' /etc/ssmtp/ssmtp.conf &&\
-  sed -i 's,/usr/lib/naemon/plugins,/usr/lib/nagios/plugins,' /etc/naemon/resource.cfg &&\
-  echo "cfg_dir=/etc/nagios-plugins/config" >> /etc/naemon/naemon.cfg
+  sed -i 's,/usr/lib/naemon/plugins,/usr/lib/nagios/plugins,' /etc/naemon/resource.cfg
 
+ADD check_nrpe.cfg /etc/naemon/conf.d/check_nrpe.cfg
 ADD thruk_root_redirect.conf /etc/apache2/conf-enabled/
 
 
