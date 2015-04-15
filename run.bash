@@ -54,7 +54,12 @@ then
     echo "!! SMTP not configured, email cannot be sent !!"
   else
     SMTP_PORT=${SMTP_PORT:-25}
-    SMTP_USE_TLS=${SMTP_USE_TLS:-true}
+    DEFAULT_SMTP_USE_TLS=true
+    if (( SMTP_PORT == 25 ))
+    then
+      DEFAULT_SMTP_USE_TLS=false
+    fi
+    SMTP_USE_TLS=${SMTP_USE_TLS:-$DEFAULT_SMTP_USE_TLS}
     echo "Configuring SMTP"
     # Setup the per-instance hostname in NAEMON
     sed -i "s/^hostname=.*/hostname=${HOSTNAME}/" /etc/ssmtp/ssmtp.conf

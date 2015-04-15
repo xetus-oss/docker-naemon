@@ -2,7 +2,9 @@ FROM phusion/baseimage
 MAINTAINER Terence Kent <tkent@xetus.com>
 
 #
-# Follow the quickstart guide for installing naemon's most recent release
+# Follow the quickstart guide for installing naemon's most recent release. 
+# Note! Currently nagios3 is aslso installed because it's the easiest way to get the
+# npre plugin to be available
 #
 RUN apt-get update &&\
   apt-get install -y apache2 apache2-utils libapache2-mod-fcgid\
@@ -10,14 +12,15 @@ RUN apt-get update &&\
   gpg --keyserver keys.gnupg.net --recv-keys F8C1CA08A57B9ED7 &&\
   gpg --armor --export F8C1CA08A57B9ED7 | apt-key add - &&\
   echo 'deb http://labs.consol.de/repo/testing/ubuntu trusty main' > /etc/apt/sources.list.d/consol.list &&\
-  apt-get update && DEBIAN_FRONTEND=noninteractive apt-get install -y  naemon nagios-plugins
+  apt-get update && DEBIAN_FRONTEND=noninteractive apt-get install -y naemon nagios-plugins nagios-nrpe-plugin
 
 #
 # Do post setup configuration
 #
 CMD sed -i 's/^#\(.*livestatus.so.*\)/\1/' /etc/naemon/naemon.cfg &&\
   sed -i 's/^#\(FromLineOverride=.*\)/FromLineOverride=YES/' /etc/ssmtp/ssmtp.conf &&\
-  sed -i 's,/usr/lib/naemon/plugins,/usr/lib/nagios/plugins,' /etc/naemon/resource.cfg
+  sed -i 's,/usr/lib/naemon/plugins,/usr/lib/nagios/plugins,' /etc/naemon/resource.cfg &&\
+  echo "cfg_dir=/etc/nagios-plugins/config" >> /etc/naemon/naemon.cfg
 
 ADD thruk_root_redirect.conf /etc/apache2/conf-enabled/
 

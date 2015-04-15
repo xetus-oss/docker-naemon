@@ -2,7 +2,7 @@
 
 A turnkey naemon image ready for most deployment situations. The key features are:
 
-1. Externalized naemon configuration
+1. Externalized naemon configuration through the `/data` volume
 2. Configurable Thruk SSL support
 3. LDAP authnentication support for Thruk
 4. External SMTP server support via ssmtp
