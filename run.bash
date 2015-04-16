@@ -200,8 +200,8 @@ then
   htpasswd -b /etc/naemon/htpasswd admin ${WEB_ADMIN_PASSWORD}
   echo "Set the thruk admin password to: $WEB_ADMIN_PASSWORD"
   
-  NOTIFICATION_FROM=${NOTIFICATION_FROM:-naemon@$HOSTNAME}
-  sed -i "s,/usr/bin/mail \\\,/usr/bin/mail -a \"From\: $NOTIFICATION_FROM\"\\\,g"\
+  NOTIFICATION_FROM=${NOTIFICATION_FROM:-Naemon <naemon@$HOSTNAME>}
+  sed -i "s,/usr/bin/mail \\\,/usr/bin/mail -a \"From\: ${NOTIFICATION_FROM}\" \\\,g"\
    /etc/naemon/conf.d/commands.cfg
    
   WEB_USERS_FULL_ACCESS=${WEB_USERS_FULL_ACCESS:-false}
