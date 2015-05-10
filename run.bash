@@ -40,6 +40,12 @@ LDAP_CONF_TEMPLATE='LDAPCacheEntries 0
 
 if [ ! -e /._container_setup ]
 then
+  # Be upgrade friendly for the jabber config
+  if [ ! -e /etc/naemon/conf.d/notify_jabber.cfg ]
+  then
+    cp /etc/naemon-template/conf.d/notify_jabber.cfg /etc/naemon/conf.d/
+  fi
+
   #
   # SMTP configuration
   # Varaibles:
@@ -219,7 +225,10 @@ then
   then
     sed -i 's/=admin/=*/g' /etc/naemon/cgi.cfg 
   fi
+fi
 
+if [[ $FIRST_TIME_INSTALLATION == true || ! -e /etc/naemon/sendxmpprc ]]
+then
   #
   # Configure jabber, if specified
   #
@@ -242,6 +251,13 @@ function graceful_exit(){
   service naemon stop
   exit $1
 }
+
+#
+# Enforce proper permissions on startup. The naemon user uid can change between.
+# TODO: adjust the build to create a Naemon user with a consistent uid/gid
+#
+chown -R naemon:naemon /data
+chown -R www-data:www-data /var/logs/naemon/thruk* /var/lib/naemon/thruk/ /var/cache/naemon/thruk/
 
 # Start the services
 service naemon start
