@@ -63,7 +63,7 @@ then
     echo "Configuring SMTP"
     # Setup the per-instance hostname in NAEMON
     sed -i "s/^hostname=.*/hostname=${HOSTNAME}/" /etc/ssmtp/ssmtp.conf
-    sed -i "s/^mailhub=.*/mailhub=${SMTP_HOST}:${SMTP_PORT}/" /etc/ssmtp/ssmtp.conf
+    sed -i "s/^mailhub=.*/mailhub=${SMTP_HOST}:${SMTP_PORT}/" /etc/ssmtp/ssmtp.conf./
     if [[ -n "$SMTP_LOGIN" && -n "$SMTP_PASS" ]]
     then
       echo "AuthUser=${SMTP_LOGIN}" >> /etc/ssmtp/ssmtp.conf
@@ -151,8 +151,9 @@ then
   fi
   WEB_LDAP_SSL_VERIFY=${WEB_LDAP_SSL_VERIFY:-$DEFAULT_WEB_LDAP_SSL_VERIFY}
   WEB_LDAP_UID=${WEB_LDAP_UID:-uid}
+  WEB_LDAP_AUTH_ENABLED=${WEB_LDAP_AUTH_ENABLED:-$DEFAULT_WEB_LDAP_AUTH_ENABLED}
 
-  if [ $WEB_LDAP_AUTH_ENABLED = true ]
+  if [ "$WEB_LDAP_AUTH_ENABLED" == true ]
   then
    echo "Configuring LDAP web authentication"
    cd /etc/apache2/mods-enabled
@@ -195,19 +196,44 @@ fi
 
 if [ $FIRST_TIME_INSTALLATION == true ]
 then
+  #
+  # Setup the random password for the thruk interface
+  #
   RANDOM_PASS=`date +%s | md5sum | base64 | head -c 8`
   WEB_ADMIN_PASSWORD=${WEB_ADMIN_PASSWORD:-$RANDOM_PASS}
   htpasswd -b /etc/naemon/htpasswd admin ${WEB_ADMIN_PASSWORD}
   echo "Set the thruk admin password to: $WEB_ADMIN_PASSWORD"
   
+  #
+  # Setup the notification from email address
+  #
   NOTIFICATION_FROM=${NOTIFICATION_FROM:-Naemon <naemon@$HOSTNAME>}
   sed -i "s,/usr/bin/mail \\\,/usr/bin/mail -a \"From\: ${NOTIFICATION_FROM}\" \\\,g"\
    /etc/naemon/conf.d/commands.cfg
    
+  #
+  # Determine if users should have full web access
+  #
   WEB_USERS_FULL_ACCESS=${WEB_USERS_FULL_ACCESS:-false}
   if [ $WEB_USERS_FULL_ACCESS == true ]
   then
     sed -i 's/=admin/=*/g' /etc/naemon/cgi.cfg 
+  fi
+
+  #
+  # Configure jabber, if specified
+  #
+  # - JABBER_HOST
+  # - JABBER_PORT
+  # - JABBER_USER
+  # - JABBER_PASS
+  if [[ -n "$JABBER_USER" && -n "JABBER_PASS" ]]
+  then
+    JABBER_HOST=${JABBER_HOST:-${JABBER_USER//*@}}
+    JABBER_PORT=${JABBER_PORT:-5222}
+    echo "${JABBER_USER};${JABBER_HOST}:${JABBER_PORT} ${JABBER_PASS}" > /etc/naemon/sendxmpprc
+    chown naemon:naemon /etc/naemon/sendxmpprc
+    chmod 600 /etc/naemon/sendxmpprc
   fi
 fi
 
