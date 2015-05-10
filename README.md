@@ -96,12 +96,12 @@ Create a public/private key pair and place them in data mount under `crt.pem` an
 
 ## Jabber support
 
-Jabber notification commands are added to the naemon configuratoin in the `notify_jabber.cfg`. By default, there are for commands which can be used for different scenarios, and their names are fairly intuitive.
+Jabber notification commands are added to the naemon configuratoin in the `notify_jabber.cfg`. By default, there are two sets of commands which can be used for different scenarios, and their names are fairly intuitive.
 
-1. notify-by-jabber-chatroom-ssl
-2. notify-by-jabber-user-ssl
-3. notify-by-jabber-chatroom
-4. notify-by-jabber-user
+1. notify-[host|service]-by-jabber-chatroom-ssl
+2. notify-[host|service]-by-jabber-user-ssl
+3. notify-[host|service]-by-jabber-chatroom
+4. notify-[host|service]-by-jabber-user
 
 Below is an example of a chatroom contact that should receive messages to an jabber over an SSL connection:
 
