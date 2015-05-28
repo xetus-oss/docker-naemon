@@ -69,7 +69,7 @@ then
     echo "Configuring SMTP"
     # Setup the per-instance hostname in NAEMON
     sed -i "s/^hostname=.*/hostname=${HOSTNAME}/" /etc/ssmtp/ssmtp.conf
-    sed -i "s/^mailhub=.*/mailhub=${SMTP_HOST}:${SMTP_PORT}/" /etc/ssmtp/ssmtp.conf./
+    sed -i "s/^mailhub=.*/mailhub=${SMTP_HOST}:${SMTP_PORT}/" /etc/ssmtp/ssmtp.conf
     if [[ -n "$SMTP_LOGIN" && -n "$SMTP_PASS" ]]
     then
       echo "AuthUser=${SMTP_LOGIN}" >> /etc/ssmtp/ssmtp.conf
