@@ -257,7 +257,7 @@ function graceful_exit(){
 # TODO: adjust the build to create a Naemon user with a consistent uid/gid
 #
 chown -R naemon:naemon /data
-chown -R www-data:www-data /var/logs/naemon/thruk* /var/lib/naemon/thruk/ /var/cache/naemon/thruk/
+chown -R www-data:www-data /var/log/naemon/thruk* /var/lib/naemon/thruk/ /var/cache/naemon/thruk/
 
 # Start the services
 service naemon start
