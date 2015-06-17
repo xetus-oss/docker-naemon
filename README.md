@@ -70,11 +70,11 @@ Below is an example of a chatroom contact that should receive messages to an jab
 define contact {
   contact_name                    sysadmins
   alias                           System Admins
-  use 					          generic-contact
-  email         		     	  systemssupport@corp.com
+  use                             generic-contact
+  email                           systemssupport@corp.com
   address1	                      naemon-notifications@conference.im.corp.com
-  host_notification_commands	  notify-host-by-jabber-chatroom-ssl
-  service_notification_commands	  notify-service-by-jabber-chatroom-ssl
+  host_notification_commands      notify-host-by-jabber-chatroom-ssl
+  service_notification_commands   notify-service-by-jabber-chatroom-ssl
 }
 
 ```
@@ -114,11 +114,11 @@ Initial setup parameters, on the other hand, are only applied when a new (empty)
 * __JABBER_PORT__: The jabber port to connect to. Default is `5222`.
 * __WEB_ADMIN_PASSWORD__: The Truck webadmin password to use. The default is a randomly generated password that will be output on the comman line.
 * __WEB_USERS_FULL_ACCESS__: Allow all authenticated users full access to the Web UI monitoring. Useful for situations where the `WEB_LDAP_FILTER` already restricts access to users with specific attributes. Default `false`.
-* __NOTIFICATION_FROM__: The "from" address for Naemon notifications. Default is `naemon@$HOSTNAME`. _Note: This is changeable in the externalized configruation_.
+* __NOTIFICATION_FROM__: The "from" address for Naemon notifications. Default is `naemon@$HOSTNAME`. _Note: This is changeable in the externalized configuration.
 
 
 ## Known Issues / Warnings
 
-##### Plugin symlinks in the /data volume are not resolveable outside of the container
+##### Plugin symlinks in the /data volume are not resolvable outside of the container
 
-The default naemon plugins are installed with the OS and resolve to a vareity of places within the container file system. This may make for a very confusing situation if trying to chase down files outside of the container.
+The default naemon plugins are installed with the OS and resolve to a variety of places within the container file system. This may make for a very confusing situation if trying to chase down files outside of the container.
