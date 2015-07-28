@@ -13,7 +13,10 @@ for datadir in "${DATA_DIRS[@]}"; do
     echo "Installing ${datadir}"
     mkdir -p ${DATA_PATH}/${datadir#/*}
     chown naemon:naemon ${DATA_PATH}/${datadir#/*}
-    cp -pr ${datadir}-template/* ${DATA_PATH}/${datadir#/*}/
+    if [ "$(ls -A ${datadir}-template 2> /dev/null)"  ]
+    then
+      cp -pr ${datadir}-template/* ${DATA_PATH}/${datadir#/*}/
+    fi
     FIRST_TIME_INSTALLATION=true
   fi
 done
@@ -23,15 +26,15 @@ SSL_SITE_CONF_TEMPLATE='<VirtualHost _default_:443>
   SSLCertificateFile    $WEB_SSL_CERT
   SSLCertificateKeyFile $WEB_SSL_KEY
   $CHAIN_FILE_ENTRY
-  Include /usr/share/naemon/thruk_cookie_auth.include
+  Include /usr/share/thruk/thruk_cookie_auth.include
 </VirtualHost>'
 
 LDAP_CONF_TEMPLATE='LDAPCacheEntries 0
-<Location /naemon/>
+<Location /thruk/>
   AuthName \"Thruk LDAP Auth\"
   AuthType Basic
   AuthBasicProvider file ldap
-  AuthUserFile /etc/naemon/htpasswd
+  AuthUserFile /etc/thruk/htpasswd
   AuthLDAPURL $WEB_LDAP_URL
   AuthLDAPBindDN $WEB_LDAP_BIND_DN
   AuthLDAPBindPassword $WEB_LDAP_BIND_PASS
@@ -180,8 +183,8 @@ then
    WEB_LDAP_URL="${WEB_LDAP_URL}${WEB_LDAP_HOST}:${WEB_LDAP_PORT}"
    WEB_LDAP_URL="${WEB_LDAP_URL}/${WEB_LDAP_BASE_DN}?${WEB_LDAP_UID}?sub?${WEB_LDAP_FILTER}"
    eval LDAP_CONF_TEMPLATE=\""$LDAP_CONF_TEMPLATE"\"
-   echo "$LDAP_CONF_TEMPLATE" > /etc/apache2/conf-enabled/naemon_ldap.conf
-   chown www-data:www-data /etc/apache2/conf-enabled/naemon_ldap.conf
+   echo "$LDAP_CONF_TEMPLATE" > /etc/apache2/conf-enabled/thruk_ldap.conf
+   chown www-data:www-data /etc/apache2/conf-enabled/thruk_ldap.conf
 
    if [ $WEB_LDAP_SSL == true ]
    then
@@ -203,27 +206,46 @@ fi
 if [ $FIRST_TIME_INSTALLATION == true ]
 then
   #
-  # Setup the random password for the thruk interface
-  #
-  RANDOM_PASS=`date +%s | md5sum | base64 | head -c 8`
-  WEB_ADMIN_PASSWORD=${WEB_ADMIN_PASSWORD:-$RANDOM_PASS}
-  htpasswd -b /etc/naemon/htpasswd admin ${WEB_ADMIN_PASSWORD}
-  echo "Set the thruk admin password to: $WEB_ADMIN_PASSWORD"
-  
+  # Earlier versions of naemon store the thruk htpasswd file
+  # under /etc/naemon, support a smooth upgrade path by moving it
+  # if it exists
+  # 
+  if [ -e /etc/naemon/htpasswd ]
+  then
+    echo "Moving the htpasswd file to the new location..."
+    mv /etc/naemon/htpasswd /etc/thruk/htpasswd
+  else
+    #
+    # Setup the random password for the thruk interface
+    #
+    RANDOM_PASS=`date +%s | md5sum | base64 | head -c 8`
+    WEB_ADMIN_PASSWORD=${WEB_ADMIN_PASSWORD:-$RANDOM_PASS}
+    htpasswd -bc /etc/thruk/htpasswd thrukadmin ${WEB_ADMIN_PASSWORD}
+    echo "Set the thrukadmin password to: $WEB_ADMIN_PASSWORD"
+  fi
+
   #
   # Setup the notification from email address
   #
   NOTIFICATION_FROM=${NOTIFICATION_FROM:-Naemon <naemon@$HOSTNAME>}
   sed -i "s,/usr/bin/mail \\\,/usr/bin/mail -a \"From\: ${NOTIFICATION_FROM}\" \\\,g"\
    /etc/naemon/conf.d/commands.cfg
-   
+
   #
-  # Determine if users should have full web access
+  # Determine if users should have full web access, supporting an optional
+  # upgrade path.
   #
-  WEB_USERS_FULL_ACCESS=${WEB_USERS_FULL_ACCESS:-false}
-  if [ $WEB_USERS_FULL_ACCESS == true ]
+  if [ -e /etc/naemon/cgi.cfg ]
   then
-    sed -i 's/=admin/=*/g' /etc/naemon/cgi.cfg 
+    echo "Moving the cgi.cfg file to the new location..."
+    mv /etc/naemon/cgi.cfg /etc/thruk/cgi.cfg
+  else
+    
+    WEB_USERS_FULL_ACCESS=${WEB_USERS_FULL_ACCESS:-false}
+    if [ $WEB_USERS_FULL_ACCESS == true ]
+    then
+      sed -i 's/=admin/=*/g' /etc/thruk/cgi.cfg
+    fi
   fi
 fi
 
@@ -248,7 +270,8 @@ fi
 
 function graceful_exit(){
   /etc/init.d/apache2 stop
-  service naemon stop
+  # Note, service naemon stop does not appaer to work
+  pkill naemon
   exit $1
 }
 
@@ -256,8 +279,8 @@ function graceful_exit(){
 # Enforce proper permissions on startup. The naemon user uid can change between.
 # TODO: adjust the build to create a Naemon user with a consistent uid/gid
 #
-chown -R naemon:naemon /data
-chown -R www-data:www-data /var/log/naemon/thruk* /var/lib/naemon/thruk/ /var/cache/naemon/thruk/
+chown -R naemon:naemon /data/var/cache/naemon /data/etc/naemon /data/var/lib/naemon /data/var/log/naemon
+chown -R www-data:www-data /data/var/log/thruk /data/etc/thruk /data/var/cache/thruk
 
 # Start the services
 service naemon start
