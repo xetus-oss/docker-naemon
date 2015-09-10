@@ -11,7 +11,7 @@ RUN apt-get update &&\
   apt-get install -y apache2 apache2-utils libapache2-mod-fcgid\
     libfontconfig1 libjpeg62 libgd3 libxpm4 xvfb libmysqlclient18\
     ssmtp ruby python-boto &&\
-  gpg --keyserver keys.gnupg.net --recv-keys F8C1CA08A57B9ED7 &&\
+  gpg --keyserver p80.pool.sks-keyservers.net --recv-keys F8C1CA08A57B9ED7 &&\
   gpg --armor --export F8C1CA08A57B9ED7 | apt-key add - &&\
   echo 'deb http://labs.consol.de/repo/testing/ubuntu trusty main' \
   > /etc/apt/sources.list.d/consol.list && apt-get update &&\

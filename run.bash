@@ -244,7 +244,19 @@ then
     WEB_USERS_FULL_ACCESS=${WEB_USERS_FULL_ACCESS:-false}
     if [ $WEB_USERS_FULL_ACCESS == true ]
     then
-      sed -i 's/=admin/=*/g' /etc/thruk/cgi.cfg
+      ACCESS_SETTINGS=(authorized_contactgroup_for_system_information\
+        authorized_contactgroup_for_configuration_information\
+        authorized_contactgroup_for_system_commands\
+        authorized_contactgroup_for_all_services\
+        authorized_contactgroup_for_all_hosts\
+        authorized_contactgroup_for_all_service_commands\
+        authorized_contactgroup_for_all_host_commands\
+      )
+      for index in ${!ACCESS_SETTINGS[*]}
+      do
+        SETTING=`echo -n ${ACCESS_SETTINGS[$index]} | awk '{print $1}'`
+        sed -i "s/${SETTING}=$/${SETTING}=\*/" /etc/thruk/cgi.cfg
+      done
     fi
   fi
 fi
