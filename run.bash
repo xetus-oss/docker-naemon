@@ -4,7 +4,6 @@
 # Naemon container bootstrap. See the readme for usage.
 #
 source /data_dirs.env
-FIRST_TIME_INSTALLATION=false
 DATA_PATH=/data
 
 for datadir in "${DATA_DIRS[@]}"; do
@@ -12,22 +11,12 @@ for datadir in "${DATA_DIRS[@]}"; do
   then
     echo "Installing ${datadir}"
     mkdir -p ${DATA_PATH}/${datadir#/*}
-    chown naemon:naemon ${DATA_PATH}/${datadir#/*}
     if [ "$(ls -A ${datadir}-template 2> /dev/null)"  ]
     then
       cp -pr ${datadir}-template/* ${DATA_PATH}/${datadir#/*}/
     fi
-    FIRST_TIME_INSTALLATION=true
   fi
 done
-
-SSL_SITE_CONF_TEMPLATE='<VirtualHost _default_:443>
-  DocumentRoot /var/www/
-  SSLCertificateFile    $WEB_SSL_CERT
-  SSLCertificateKeyFile $WEB_SSL_KEY
-  $CHAIN_FILE_ENTRY
-  Include /usr/share/thruk/thruk_cookie_auth.include
-</VirtualHost>'
 
 LDAP_CONF_TEMPLATE='LDAPCacheEntries 0
 <Location /thruk/>
@@ -43,12 +32,6 @@ LDAP_CONF_TEMPLATE='LDAPCacheEntries 0
 
 if [ ! -e /._container_setup ]
 then
-  # Be upgrade friendly for the jabber config
-  if [ ! -e /etc/naemon/conf.d/notify_jabber.cfg ]
-  then
-    cp /etc/naemon-template/conf.d/notify_jabber.cfg /etc/naemon/conf.d/
-  fi
-
   #
   # SMTP configuration
   # Varaibles:
@@ -60,7 +43,7 @@ then
   # - NOTIFICATION_FROM
   if [ -z "$SMTP_HOST" ]
   then
-    echo "!! SMTP not configured, email cannot be sent !!"
+    echo "!! SMTP not configured, email will be sent !!"
   else
     SMTP_PORT=${SMTP_PORT:-25}
     DEFAULT_SMTP_USE_TLS=true
@@ -84,44 +67,6 @@ then
       echo "UseTLS=Yes" >> /etc/ssmtp/ssmtp.conf
       echo "UseSTARTTLS=Yes" >> /etc/ssmtp/ssmtp.conf
     fi
-  fi
-  
-  #
-  # Thruk SSL configuration (optional, see readme)
-  #
-  # Varaibles:
-  # - WEB_SSL_ENABLED
-  # - WEB_SSL_CERT
-  # - WEB_SSL_KEY
-  # - WEB_SSL_CA
-  DEFAULT_WEB_SSL_ENABLED=false
-  if [[ -n "$WEB_SSL_CERT" || -n "$WEB_SSL_KEY" ]]
-  then
-    DEFAULT_WEB_SSL_ENABLED=true
-  fi
-  WEB_SSL_CERT=${WEB_SSL_CERT:-/data/crt.pem}
-  WEB_SSL_KEY=${WEB_SSL_KEY:-/data/key.pem}
-  WEB_SSL_ENABLED=${WEB_SSL_ENABLED:-$DEFAULT_WEB_SSL_ENABLED}
-  if [ $WEB_SSL_ENABLED == true ]
-  then
-    echo "Enabling SSL for Thruk"
-    # Enable the required modules
-    cd /etc/apache2/mods-enabled
-    for apache_mod in ssl.conf ssl.load socache_shmcb.load
-    do
-      if [ ! -e $apache_mod ]
-      then
-        ln -s ../mods-available/${apache_mod} $apache_mod
-      fi
-    done
-
-    if [ -n "$WEB_SSL_CA" ]
-    then
-      CHAIN_FILE_ENTRY="SSLCertificateChainFile $WEB_SSL_CA"
-    fi
-    eval SSL_SITE_CONF_TEMPLATE=\""$SSL_SITE_CONF_TEMPLATE"\"
-    echo "$SSL_SITE_CONF_TEMPLATE" > /etc/apache2/sites-enabled/default_ssl.conf
-    chown www-data:www-data /etc/apache2/sites-enabled/default_ssl.conf
   fi
  
   #
@@ -203,96 +148,93 @@ then
   touch /._container_setup
 fi
 
-if [ $FIRST_TIME_INSTALLATION == true ]
+# Be upgrade friendly for the jabber config
+if [ ! -e /etc/naemon/conf.d/notify_jabber_commands.cfg ]
 then
-  #
-  # Earlier versions of naemon store the thruk htpasswd file
-  # under /etc/naemon, support a smooth upgrade path by moving it
-  # if it exists
-  # 
-  if [ -e /etc/naemon/htpasswd ]
+  if [ -e /etc/naemon/conf.d/notify_jabber.cfg ]
   then
-    echo "Moving the htpasswd file to the new location..."
-    mv /etc/naemon/htpasswd /etc/thruk/htpasswd
+    mv /etc/naemon/conf.d/notify_jabber.cfg /etc/naemon/conf.d/notify_jabber_commands.cfg 
   else
-    #
-    # Setup the random password for the thruk interface
-    #
-    RANDOM_PASS=`date +%s | md5sum | base64 | head -c 8`
-    WEB_ADMIN_PASSWORD=${WEB_ADMIN_PASSWORD:-$RANDOM_PASS}
-    htpasswd -bc /etc/thruk/htpasswd thrukadmin ${WEB_ADMIN_PASSWORD}
-    echo "Set the thrukadmin password to: $WEB_ADMIN_PASSWORD"
-  fi
-
-  #
-  # Setup the notification from email address
-  #
-  NOTIFICATION_FROM=${NOTIFICATION_FROM:-Naemon <naemon@$HOSTNAME>}
-  sed -i "s,/usr/bin/mail \\\,/usr/bin/mail -a \"From\: ${NOTIFICATION_FROM}\" \\\,g"\
-   /etc/naemon/conf.d/commands.cfg
-
-  #
-  # Determine if users should have full web access, supporting an optional
-  # upgrade path.
-  #
-  if [ -e /etc/naemon/cgi.cfg ]
-  then
-    echo "Moving the cgi.cfg file to the new location..."
-    mv /etc/naemon/cgi.cfg /etc/thruk/cgi.cfg
-  else
-    
-    WEB_USERS_FULL_ACCESS=${WEB_USERS_FULL_ACCESS:-false}
-    if [ $WEB_USERS_FULL_ACCESS == true ]
-    then
-      ACCESS_SETTINGS=(authorized_contactgroup_for_system_information\
-        authorized_contactgroup_for_configuration_information\
-        authorized_contactgroup_for_system_commands\
-        authorized_contactgroup_for_all_services\
-        authorized_contactgroup_for_all_hosts\
-        authorized_contactgroup_for_all_service_commands\
-        authorized_contactgroup_for_all_host_commands\
-      )
-      for index in ${!ACCESS_SETTINGS[*]}
-      do
-        SETTING=`echo -n ${ACCESS_SETTINGS[$index]} | awk '{print $1}'`
-        sed -i "s/${SETTING}=$/${SETTING}=\*/" /etc/thruk/cgi.cfg
-      done
-    fi
+    cp /etc/naemon-template/conf.d/notify_jabber_commands.cfg /etc/naemon/conf.d/
   fi
 fi
 
-if [[ $FIRST_TIME_INSTALLATION == true || ! -e /etc/naemon/sendxmpprc ]]
+#
+# Earlier versions of naemon store the thruk htpasswd file
+# under /etc/naemon, support a smooth upgrade path by moving it
+# if it exists
+# 
+if [ -e /etc/naemon/htpasswd ]
 then
-  #
-  # Configure jabber, if specified
-  #
-  # - JABBER_HOST
-  # - JABBER_PORT
-  # - JABBER_USER
-  # - JABBER_PASS
-  if [[ -n "$JABBER_USER" && -n "JABBER_PASS" ]]
-  then
-    JABBER_HOST=${JABBER_HOST:-${JABBER_USER//*@}}
-    JABBER_PORT=${JABBER_PORT:-5222}
-    echo "${JABBER_USER};${JABBER_HOST}:${JABBER_PORT} ${JABBER_PASS}" > /etc/naemon/sendxmpprc
-    chown naemon:naemon /etc/naemon/sendxmpprc
-    chmod 600 /etc/naemon/sendxmpprc
-  fi
+  echo "UPGRADE: Moving the htpasswd file to the new location..."
+  mv /etc/naemon/htpasswd /etc/thruk/htpasswd
+  # We assume the naemon password was set in an upgrade situation
+  touch /etc/thruk/._install_script_password_set
+fi
+
+#
+# Setup the random password for the thruk interface
+#
+if [ ! -e /etc/thruk/._install_script_password_set ]
+then
+  RANDOM_PASS=`date +%s | md5sum | base64 | head -c 8`
+  WEB_ADMIN_PASSWORD=${WEB_ADMIN_PASSWORD:-$RANDOM_PASS}
+  htpasswd -bc /etc/thruk/htpasswd thrukadmin ${WEB_ADMIN_PASSWORD}
+  echo "Set the thrukadmin password to: $WEB_ADMIN_PASSWORD"
+  touch /etc/thruk/._install_script_password_set
+fi
+
+#
+# Setup the notification from email address
+#
+NOTIFICATION_FROM=${NOTIFICATION_FROM:-Naemon <naemon@$HOSTNAME>}
+sed -i "s,| /usr/bin/mail .*\\\,| /usr/bin/mail -a \"From\: ${NOTIFICATION_FROM}\" \\\,"\
+  /etc/naemon/conf.d/commands.cfg
+
+#
+# If upgrading from a previous container, move the cfg.cfg
+#
+if [ -e /etc/naemon/cgi.cfg ]
+then
+  echo "UPGRADE: Moving the cgi.cfg file to the new location..."
+  mv /etc/naemon/cgi.cfg /etc/thruk/cgi.cfg
+fi
+
+#
+# Note this is pretty liberal. Do not use this feature if you want
+# granular control permissions
+#
+WEB_USERS_FULL_ACCESS=${WEB_USERS_FULL_ACCESS:-false}
+if [ $WEB_USERS_FULL_ACCESS == true ]
+then
+  sed -i 's/authorized_for_\(.\+\)=thrukadmin/authorized_for_\1=*/' /etc/thruk/cgi.cfg
+fi
+
+#
+# Configure jabber, if specified
+#
+# - JABBER_HOST
+# - JABBER_PORT
+# - JABBER_USER
+# - JABBER_PASS
+if [[ -n "$JABBER_USER" && -n "JABBER_PASS" ]]
+then
+  JABBER_HOST=${JABBER_HOST:-${JABBER_USER//*@}}
+  JABBER_PORT=${JABBER_PORT:-5222}
+  echo "${JABBER_USER};${JABBER_HOST}:${JABBER_PORT} ${JABBER_PASS}" > /etc/naemon/sendxmpprc
+  chown naemon:naemon /etc/naemon/sendxmpprc
+  chmod 600 /etc/naemon/sendxmpprc
 fi
 
 function graceful_exit(){
   /etc/init.d/apache2 stop
-  # Note, service naemon stop does not appaer to work
+  # Note, service naemon stop does not appear to work
   pkill naemon
   exit $1
 }
 
-#
-# Enforce proper permissions on startup. The naemon user uid can change between.
-# TODO: adjust the build to create a Naemon user with a consistent uid/gid
-#
-chown -R naemon:naemon /data/var/cache/naemon /data/etc/naemon /data/var/lib/naemon /data/var/log/naemon
-chown -R www-data:www-data /data/var/log/thruk /data/etc/thruk /data/var/cache/thruk
+chown -R naemon:naemon /data/etc/naemon /data/var/log/naemon
+chown -R www-data:www-data /data/var/log/thruk /data/etc/thruk
 
 # Start the services
 service naemon start
