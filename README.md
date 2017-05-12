@@ -87,7 +87,7 @@ The command below will setup a container configured to speak to a Jabber server 
 ```
  docker run --name naemon -h naemon -d -p 80:80 \
   -e JABBER_USER=myuser@im.example.com \
-  -e 'JABBER_PASS=secret' \
+  -e JABBER_PASS='secret' \
   -e JABBER_PORT=5223 \
   -v /somepath/naemon_mnt:/data xetusoss/naemon:TAG
 ```
@@ -119,7 +119,7 @@ define contact {
   alias                           System Admins
   use                             generic-contact
   email                           systemssupport@corp.com
-  address1	                      naemon-notifications@conference.im.corp.com
+  address1	                  naemon-notifications@conference.im.corp.com
   host_notification_commands      notify-host-by-jabber-chatroom-ssl
   service_notification_commands   notify-service-by-jabber-chatroom-ssl
 }
