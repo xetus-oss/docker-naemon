@@ -228,7 +228,8 @@ fi
 
 function graceful_exit(){
   /etc/init.d/apache2 stop
-  # Note, service naemon stop does not appear to work
+  # Note, "service naemon stop" does not work in the phusion image
+  # We just kill the process rather than chase this down.
   pkill naemon
   exit $1
 }
