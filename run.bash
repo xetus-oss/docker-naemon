@@ -234,8 +234,19 @@ function graceful_exit(){
   exit $1
 }
 
+#
+# Ensure consistent ownership for the data volume, even if the
+# UID/GID's changes
+#
 chown -R naemon:naemon /data/etc/naemon /data/var/log/naemon
 chown -R www-data:www-data /data/var/log/thruk /data/etc/thruk
+
+#
+# The /var/cache/naemon directory is not writable by 
+# users other than naemon, meaning thruk's configuration
+# tool cannot write to the directory for config checks.
+#
+chmod 775 /var/cache/naemon
 
 # Start the services
 service naemon start
