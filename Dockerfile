@@ -1,4 +1,4 @@
-FROM phusion/baseimage:0.9.21
+FROM phusion/baseimage:master
 MAINTAINER Terence Kent <tkent@xetus.com>
 
 #
@@ -36,7 +36,7 @@ RUN gpg --keyserver keys.gnupg.net --recv-keys F8C1CA08A57B9ED7 &&\
   apt-get update &&\
   DEBIAN_FRONTEND=noninteractive apt-get install -y \
     nagios-nrpe-plugin\
-    naemon=1.0.6
+    naemon=1.1.0
 
 ############################################################
 # If modifying this build script, add cutom packages here! #
